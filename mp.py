@@ -15,7 +15,7 @@ def setup(rank, world_size):
     os.environ['MASTER_PORT'] = '12355'
 
     # initialize the process group
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+    dist.init_process_group("mpi", rank=rank, world_size=world_size)
 
 
 def cleanup():
@@ -127,7 +127,6 @@ def demo_model_parallel(rank, world_size):
         dev0 = rank * 2
         dev1 = rank * 2 + 1
 
-        print(dev0, dev1)
         mp_model = ToyMpModel(dev0, dev1)
         ddp_mp_model = DDP(mp_model)
 
@@ -146,10 +145,10 @@ def demo_model_parallel(rank, world_size):
 
 if __name__ == "__main__":
     # n_gpus = torch.cuda.device_count()
-    n_gpus = 8 
-    if n_gpus < 8:
-        print(f"Requires at least 8 GPUs to run, but got {n_gpus}.")
+    n_gpus = 2
+    if n_gpus < 2:
+        print(f"Requires at least 2 GPUs to run, but got {n_gpus}.")
     else:
-        run_demo(demo_basic, 2)
-        run_demo(demo_checkpoint, 2)
-        run_demo(demo_model_parallel, 2)
+        run_demo(demo_basic, n_gpus)
+        # run_demo(demo_checkpoint, n_gpus)
+        run_demo(demo_model_parallel, n_gpus)

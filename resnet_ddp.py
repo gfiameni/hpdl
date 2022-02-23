@@ -190,7 +190,7 @@ def main():
             optimizer.step()
 
         print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
-        print("Time {} seconds".format(time.time() - t0))
+        print("Time {} seconds".format(round(time.time() - t0, 2)))
             
 if __name__ == "__main__":
     main()
