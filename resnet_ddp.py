@@ -82,7 +82,7 @@ def evaluate(model, device, test_loader):
 def main():
 
     num_epochs_default = 5
-    batch_size_default = 256 # 1024
+    batch_size_default = 256 # 256 # 1024
     learning_rate_default = 0.1
     random_seed_default = 0
     model_dir_default = "saved_models"
