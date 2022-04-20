@@ -11,6 +11,12 @@ import random
 import numpy as np
 import time
 import torch.distributed as dist
+from torch.distributed.optim import ZeroRedundancyOptimizer
+
+
+def print_peak_memory(prefix, device):
+    if device == 0:
+        print(f"{prefix}: {torch.cuda.max_memory_allocated(device) // 1e6}MB ")
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = '127.0.0.1'
@@ -81,7 +87,7 @@ def evaluate(model, device, test_loader):
 
 def main():
 
-    num_epochs_default = 5
+    num_epochs_default = 1
     batch_size_default = 256 # 256 # 1024
     learning_rate_default = 0.1
     random_seed_default = 0
@@ -98,6 +104,8 @@ def main():
     parser.add_argument("--model_dir", type=str, help="Directory for saving models.", default=model_dir_default)
     parser.add_argument("--model_filename", type=str, help="Model filename.", default=model_filename_default)
     parser.add_argument("--resume", action="store_true", help="Resume training from saved checkpoint.")
+    parser.add_argument("--channels-last", action="store_true", help="Channels last")
+    parser.add_argument("--use-zero", action="store_true", help="Zero Redundancy Optimizer")
     argv = parser.parse_args()
 
     local_rank = argv.local_rank
@@ -134,8 +142,18 @@ def main():
     model = torchvision.models.resnet18(pretrained=False)
 
     device = torch.device("cuda:{}".format(local_rank))
-    model = model.to(device)
+
+    # Mixed precision 
+    scaler = torch.cuda.amp.GradScaler()
+
+    if torch.backends.cudnn.version() >= 7603 and argv.channels_last:
+        model = model.to(device, memory_format=torch.channels_last)  # Module parameters need to be channels last
+    else:
+        model = model.to(device)
+
+    print_peak_memory("Max memory allocated after creating local model", local_rank)
     ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
+    print_peak_memory("Max memory allocated after creating DDP", local_rank)
 
     # We only save the model who uses device "cuda:0"
     # To resume, the device for the saved model would also be "cuda:0"
@@ -164,7 +182,17 @@ def main():
     test_loader = DataLoader(dataset=test_set, batch_size=128, shuffle=False, num_workers=8)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(ddp_model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-5)
+
+    if argv.use_zero:
+        optimizer = ZeroRedundancyOptimizer(
+            ddp_model.parameters(),
+            optimizer_class=optim.SGD,
+            lr=learning_rate,
+            momentum=0.9, 
+            weight_decay=1e-5
+        )
+    else:
+        optimizer = optim.SGD(ddp_model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-5)
 
     # Loop over the dataset multiple times
     for epoch in range(num_epochs):
@@ -182,12 +210,28 @@ def main():
         ddp_model.train()
         
         for data in train_loader:
-            inputs, labels = data[0].to(device), data[1].to(device)
+            if torch.backends.cudnn.version() >= 7603 and argv.channels_last:
+                inputs, labels = data[0].to(device, memory_format=torch.channels_last), data[1].to(device, memory_format=torch.channels_last)
+            else:
+                inputs, labels = data[0].to(device), data[1].to(device)
+
             optimizer.zero_grad()
-            outputs = ddp_model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+
+            with torch.cuda.amp.autocast():
+                outputs = ddp_model(inputs)
+                loss = criterion(outputs, labels)
+                
+            scaler.scale(loss).backward()
+
+            print_peak_memory("Max memory allocated before optimizer step()", local_rank)
+            scaler.step(optimizer)
+            print_peak_memory("Max memory allocated after optimizer step()", local_rank)
+
+        # Updates the scale for next iteration.
+            scaler.update()
+            
+            #loss.backward()
+            #optimizer.step()
 
         print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
         print("Time {} seconds".format(round(time.time() - t0, 2)))
