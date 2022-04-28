@@ -1,19 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-(beta) Channels Last Memory Format in PyTorch
-*******************************************************
-**Author**: `Vitaly Fedyunin <https://github.com/VitalyFedyunin>`_
-What is Channels Last
----------------------
-Channels last memory format is an alternative way of ordering NCHW tensors in memory preserving dimensions ordering. Channels last tensors ordered in such a way that channels become the densest dimension (aka storing images pixel-per-pixel).
-For example, classic (contiguous) storage of NCHW tensor (in our case it is two 4x4 images with 3 color channels) look like this:
-.. figure:: /_static/img/classic_memory_format.png
-   :alt: classic_memory_format
-Channels last memory format orders data differently:
-.. figure:: /_static/img/channels_last_memory_format.png
-   :alt: channels_last_memory_format
-Pytorch supports memory formats (and provides back compatibility with existing models including eager, JIT, and TorchScript) by utilizing  existing strides structure.
-For example, 10x3x16x16 batch in Channels last format will have strides equal to (768, 1, 48, 3).
+
 """
 
 ######################################################################

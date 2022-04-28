@@ -56,12 +56,14 @@ def example(rank, world_size, use_zero):
 def main():
     world_size = 2
     print("=== Using ZeroRedundancyOptimizer ===")
+    print("= Spawning ", world_size, " processes.")
     mp.spawn(example,
         args=(world_size, True),
         nprocs=world_size,
         join=True)
 
     print("=== Not Using ZeroRedundancyOptimizer ===")
+    print("= Spawning ", world_size, " processes.")
     mp.spawn(example,
         args=(world_size, False),
         nprocs=world_size,
