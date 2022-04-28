@@ -151,9 +151,11 @@ def main():
     else:
         model = model.to(device)
 
-    print_peak_memory("Max memory allocated after creating local model", local_rank)
+    if argv.use_zero:
+        print_peak_memory("Max memory allocated after creating local model", local_rank)
     ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], output_device=local_rank)
-    print_peak_memory("Max memory allocated after creating DDP", local_rank)
+    if argv.use_zero:
+        print_peak_memory("Max memory allocated after creating DDP", local_rank)
 
     # We only save the model who uses device "cuda:0"
     # To resume, the device for the saved model would also be "cuda:0"
@@ -223,9 +225,11 @@ def main():
                 
             scaler.scale(loss).backward()
 
-            print_peak_memory("Max memory allocated before optimizer step()", local_rank)
+            if argv.use_zero:
+                print_peak_memory("Max memory allocated before optimizer step()", local_rank)
             scaler.step(optimizer)
-            print_peak_memory("Max memory allocated after optimizer step()", local_rank)
+            if argv.use_zero:
+                print_peak_memory("Max memory allocated after optimizer step()", local_rank)
 
         # Updates the scale for next iteration.
             scaler.update()
