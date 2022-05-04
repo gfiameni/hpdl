@@ -25,10 +25,6 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
-if sys.platform == 'win32':
-    print('Windows platform is not supported for pipeline parallelism')
-    sys.exit(0)
-
 if torch.cuda.device_count() < 4:
     print('Need at least four GPU devices for this tutorial')
     sys.exit(0)
