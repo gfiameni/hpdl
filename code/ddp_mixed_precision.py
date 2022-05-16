@@ -4,8 +4,8 @@ Link: https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
 Modified for educational purposes.
 """
 import os 
-gpu_list = "0,1,2,3"
-os.environ['CUDA_VISIBLE_DEVICES'] = gpu_list
+#gpu_list = "0,1,2,3"
+#os.environ['CUDA_VISIBLE_DEVICES'] = gpu_list
 
 import torch
 import torchvision

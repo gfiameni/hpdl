@@ -227,7 +227,7 @@ def main():
             scaler.update()
             
             #loss.backward()
-            #optimizer.step()
+            optimizer.step()
 
         print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
         print("Time {} seconds".format(round(time.time() - t0, 2)))
