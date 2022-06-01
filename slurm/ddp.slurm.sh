@@ -8,19 +8,15 @@
 #SBATCH --gres=gpu:2        # 2 gpus per node out of 4
 #SBATCH --job-name=ddp
 
-module load anaconda/2020.11
-module load cuda/11.0
-module load cmake
-module load profile/deeplrn
+module load autoload profile/deeplrn
+module load cineca-ai
 
 source "/cineca/prod/opt/tools/anaconda/2020.11/none/etc/profile.d/conda.sh"
 
-MYENV=$CINECA_SCRATCH/phd-ai/hpdl-env
-
-conda activate $MYENV
+conda activate $CINECA_AI_ENV
 
 cd $CINECA_SCRATCH/phd-ai/hpdl
 
-srun python -W ignore -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 --node_rank=0 --master_addr="127.0.0.1" --master_port=1234 code/ddp.py --num_epochs 5 --model_dir data
+python -W ignore -m torch.distributed.launch --nproc_per_node=2 --nnodes=1 --node_rank=0 --master_addr="127.0.0.1" --master_port=1234 code/ddp.py --num_epochs 5 --model_dir data
 
 conda deactivate

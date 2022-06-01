@@ -180,9 +180,9 @@ def main():
     # Restricts data loading to a subset of the dataset exclusive to the current process
     train_sampler = DistributedSampler(dataset=train_set)
 
-    train_loader = DataLoader(dataset=train_set, batch_size=batch_size, sampler=train_sampler, num_workers=8)
+    train_loader = DataLoader(dataset=train_set, batch_size=batch_size, sampler=train_sampler, num_workers=4)
     # Test loader does not have to follow distributed sampling strategy
-    test_loader = DataLoader(dataset=test_set, batch_size=128, shuffle=False, num_workers=8)
+    test_loader = DataLoader(dataset=test_set, batch_size=128, shuffle=False, num_workers=4)
 
     criterion = nn.CrossEntropyLoss()
 
