@@ -220,10 +220,14 @@ def main():
 
             optimizer.zero_grad()
 
+            print('Labels ', labels.shape)
+
             with torch.cuda.amp.autocast():
                 outputs = ddp_model(inputs)
                 loss = criterion(outputs, labels)
-                
+
+            print('Outputs ', outputs.shape)    
+            
             scaler.scale(loss).backward()
 
             if argv.use_zero:

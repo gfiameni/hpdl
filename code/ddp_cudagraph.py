@@ -187,7 +187,9 @@ def main():
     # Test loader does not have to follow distributed sampling strategy
     test_loader = DataLoader(dataset=test_set, batch_size=128, shuffle=False, num_workers=4)
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss()
+
+    # criterion = torch.nn.MSELoss()
 
     if argv.use_zero:
         optimizer = ZeroRedundancyOptimizer(
@@ -200,21 +202,12 @@ def main():
     else:
         optimizer = optim.SGD(ddp_model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-5)
 
-# CUDAGraph
-"""
-    N, D_in, H, D_out = 640, 4096, 2048, 1024
-    model = torch.nn.Sequential(torch.nn.Linear(D_in, H),
-                                torch.nn.Dropout(p=0.2),
-                                torch.nn.Linear(H, D_out),
-                                torch.nn.Dropout(p=0.1)).cuda()
-    loss_fn = torch.nn.MSELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    N, C, H, W, O = 256, 3, 32, 32, 1000
 
-    # Placeholders used for capture
-    static_input = torch.randn(80, 3, 32, 32, device='cuda')
-    static_target = torch.randn(N, D_out, device='cuda')
+    static_input = torch.randn(N, C, H, W, device='cuda')
+    static_labels = torch.randn(N, O, device='cuda')
 
-    print(static_input.size())
+    # static_labels = torch.randn(O, device='cuda')
 
     s = torch.cuda.Stream()
     s.wait_stream(torch.cuda.current_stream())
@@ -222,79 +215,29 @@ def main():
         for i in range(3):
             optimizer.zero_grad(set_to_none=True)
             y_pred = model(static_input)
-            loss = criterion(y_pred, static_target)
+            # y_pred = model(static_input)
+            loss = criterion(y_pred, static_labels)
+            loss = loss
             loss.backward()
             optimizer.step()
-    torch.cuda.current_stream().wait_stream(s)
-
-    # capture
-    g = torch.cuda.CUDAGraph()
-    # Sets grads to None before capture, so backward() will create
-    # .grad attributes with allocations from the graph's private pool
-    optimizer.zero_grad(set_to_none=True)
-    with torch.cuda.graph(g):
-        static_y_pred = model(static_input)
-        static_loss = loss_fn(static_y_pred, static_target)
-        static_loss.backward()
-        optimizer.step()
-
-    real_inputs = [torch.rand_like(static_input) for _ in range(10)]
-    real_targets = [torch.rand_like(static_target) for _ in range(10)]
-
-    for data, target in zip(real_inputs, real_targets):
-        # Fills the graph's input memory with new data to compute on
-        static_input.copy_(data)
-        static_target.copy_(target)
-        # replay() includes forward, backward, and step.
-        # You don't even need to call optimizer.zero_grad() between iterations
-        # because the captured backward refills static .grad tensors in place.
-        g.replay()
-        # Params have been updated. static_y_pred, static_loss, and .grad
-        # attributes hold values from computing on this iteration's data.
-"""
-# End of CUDA Graph
-
-
-    s = torch.cuda.Stream()
-    s.wait_stream(torch.cuda.current_stream())
-    with torch.cuda.stream(s):
-        for data in train_loader:
-            if torch.backends.cudnn.version() >= 7603 and argv.channels_last:
-                inputs, labels = data[0].to(device, memory_format=torch.channels_last), data[1].to(device, memory_format=torch.channels_last)
-            else:
-                inputs, labels = data[0].to(device), data[1].to(device)
-
-            print('Inputs ', inputs.size())
-            print('Labels ', labels.size())
-
-            optimizer.zero_grad()
-
-            with torch.cuda.amp.autocast():
-                outputs = ddp_model(inputs)
-                loss = criterion(outputs, labels)
-                
-            scaler.scale(loss).backward()
-            scaler.update()
     torch.cuda.current_stream().wait_stream(s)       
 
+    s.synchronize()
+    torch.cuda.empty_cache()
+
     # capture
     g = torch.cuda.CUDAGraph()
     # Sets grads to None before capture, so backward() will create
     # .grad attributes with allocations from the graph's private pool
     optimizer.zero_grad(set_to_none=True)
     with torch.cuda.graph(g):
-            if torch.backends.cudnn.version() >= 7603 and argv.channels_last:
-                inputs, labels = data[0].to(device, memory_format=torch.channels_last), data[1].to(device, memory_format=torch.channels_last)
-            else:
-                inputs, labels = data[0].to(device), data[1].to(device)
-
-            optimizer.zero_grad()
-            with torch.cuda.amp.autocast():
-                outputs = ddp_model(inputs)
-                loss = criterion(outputs, labels)
-                
-            scaler.scale(loss).backward()
-            scaler.update()
+        """
+        # outputs = ddp_model(static_input)
+        """
+        static_y_pred = model(static_input)
+        static_loss = criterion(static_y_pred, static_labels)
+        static_loss.backward()
+        optimizer.step()
 
 
     # Loop over the dataset multiple times
@@ -327,21 +270,11 @@ def main():
                 outputs = ddp_model(inputs)
                 loss = criterion(outputs, labels)
                 
-            scaler.scale(loss).backward()
-
-            """
-            if argv.use_zero:
-                print_peak_memory("Max memory allocated before optimizer step()", local_rank)
-            scaler.step(optimizer)
-            if argv.use_zero:
-                print_peak_memory("Max memory allocated after optimizer step()", local_rank)
-            """
-
-        # Updates the scale for next iteration.
-            scaler.update()
+            loss.backward()
+            optimizer.step()
             
-            #loss.backward()
-            #optimizer.step()
+            #scaler.scale(loss).backward()
+            #scaler.update()
 
         print("Local Rank: {}, Epoch: {}, Training ...".format(local_rank, epoch))
         print("Time {} seconds".format(round(time.time() - t0, 2)))
