@@ -60,6 +60,7 @@ if __name__ == "__main__":
             gscaler.scale(loss).backward()
             optimizer.step()
 
+
         # wait and clean up
         s.synchronize()
         gc.collect()
@@ -78,19 +79,6 @@ if __name__ == "__main__":
             gscaler.scale(static_loss).backward()
             optimizer.step()
 
-            """
-            if local_rank == 0:
-                reqs = []
-                req1 = dist.isend(tensor=static_input, dst=1) # enqueue the operation instead of issuing it
-                reqs.append(req1)
-                reqs.wait_all() # blocking until all operators are finished 
-            if local_rank == 1:
-                # Rank 1: 
-                reqs = []
-                req1 = dist.irecv(tensor=static_input, src=0)
-                reqs.append(req1)
-                reqs.wait_all() 
-        """
         torch.cuda.current_stream().wait_stream(s)
 
     real_inputs = [torch.rand_like(static_input) for _ in range(1000)]
