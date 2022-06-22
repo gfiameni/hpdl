@@ -12,6 +12,10 @@
 #SBATCH -p m100_sys_test
 #SBATCH --qos=qos_test
 
+#SBATCH --exclusive
+#SBATCH --overcommit
+#SBATCH --parsable
+
 module load autoload profile/deeplrn cineca-ai
 
 export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
