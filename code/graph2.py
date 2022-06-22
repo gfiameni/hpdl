@@ -1,5 +1,6 @@
 import torch
 import os
+import time
 
 if __name__ == "__main__":
 
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     #s.wait_stream(torch.cuda.current_stream())
     with torch.cuda.stream(s):
             ddp_model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[local_rank], 
-                output_device=local_rank)
+                output_device=local_rank, find_unused_parameters=True)
     torch.cuda.current_stream().wait_stream(s)
 
     loss_fn = torch.nn.CrossEntropyLoss()
@@ -79,8 +80,13 @@ if __name__ == "__main__":
     real_inputs = [torch.rand_like(static_input) for _ in range(1000)]
     real_targets = [torch.rand_like(static_target) for _ in range(1000)]
 
+    # torch.cuda.synchronize()
+    t_time = time.perf_counter_ns()
     for data, target in zip(real_inputs, real_targets):
         static_input.copy_(data)
         static_target.copy_(target)
         # replay() includes forward, backward, and step.
         g.replay()
+    t_time = time.perf_counter_ns() - t_time
+    # torch.cuda.synchronize()
+    print(f"Execution time: {t_time*1e-6} ms")
