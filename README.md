@@ -32,7 +32,9 @@ The code labs have been written using Jupyter notebooks and a Dockerfile has bee
 `sudo docker run --gpus all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -it --rm --network=host -v ~/hpdl/Pytorch_Distributed_Deep_Learning/workspace:/workspace pytorch:1.0 jupyter-lab --no-browser --allow-root --ip=0.0.0.0 --port=8888 --NotebookApp.token="" --notebook-dir=/workspace`
 
 
-The `--gpus` flag is used to enable `all` NVIDIA GPUs during container runtime. The `--rm` flag is used to clean an temporary images created during the running of the container. The `-it` flag enables killing the jupyter server with `ctrl-c`. The `--ipc=host --ulimit memlock=-1 --ulimit stack=67108864` enable sufficient memory allocation to run pytorch within the docker environment. The `jupyter-lab --no-browser --allow-root --ip=0.0.0.0 --port=8888 --NotebookApp.token="" --notebook-dir=/workspace` command launch the jupyter notebook inside the container. The flag `-v` allows the mapping of working directory on your local machine `~/hpdl/Pytorch_Distributed_Deep_Learning/workspace:/workspace` to `worspace` directory inside the container.
+The `--gpus` flag is used to enable `all` NVIDIA GPUs during container runtime. The `--rm` flag is used to clean an temporary images created during the running of the container. The `-it` flag enables killing the jupyter server with `ctrl-c`. The `--ipc=host --ulimit memlock=-1 --ulimit stack=67108864` enable sufficient memory allocation to run pytorch within the docker environment. 
+
+The `jupyter-lab --no-browser --allow-root --ip=0.0.0.0 --port=8888 --NotebookApp.token="" --notebook-dir=/workspace` command launch the jupyter notebook inside the container. The flag `-v` allows the mapping of working directory on your local machine `~/hpdl/Pytorch_Distributed_Deep_Learning/workspace:/workspace` to `worspace` directory inside the container.
 
 
 This command may be customized for your hosting environment. Now, open the jupyter notebook in browser: http://localhost:8888
@@ -43,14 +45,14 @@ Start by clicking on the `Start_Here.ipynb` notebook.
 ### Singularity Container
   
 To build the singularity container, run:
-`sudo singularity build --sandbox <image_name>.simg Singularity`
+`sudo singularity build --fakeroot <image_name>.simg Singularity`
 
-and copy the files to your local machine to make sure changes are stored locally:
-`singularity run --writable <image_name>.simg cp -rT /workspace/ ~/workspace`
+For example:and copy the files to your local machine to make sure changes are stored locally:
+`singularity build --fakeroot pytorch.simg Singularity`
 
 
 Then, run the container:
-`singularity run --nv --writable <image_name>.simg jupyter-lab --no-browser --allow-root --ip=0.0.0.0 --port=8888 --NotebookApp.token="" --notebook-dir=/workspace/pytorch/jupyter_notebook/`
+`singularity run --nv --bind ~/hpdl/Pytorch_Distributed_Deep_Learning/workspace:/workspace pytorch.simg jupyter-lab --no-browser --allow-root --ip=0.0.0.0 --port=8888 --NotebookApp.token="" --notebook-dir=/workspace`
 
 Then, open the jupyter notebook in browser: http://localhost:8888
 Start working on the lab by clicking on the `Start_Here.ipynb` notebook.
