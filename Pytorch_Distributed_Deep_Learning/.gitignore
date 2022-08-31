@@ -1,0 +1,8 @@
+saved_models/
+.ipynb_checkpoints/
+__pycache__/
+*.pth
+data/
+/*.png
+slurm/*.out
+slurm/*.err
