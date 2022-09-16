@@ -47,7 +47,7 @@ Start by clicking on the `Start_Here.ipynb` notebook.
 To build the singularity container, run:
 `sudo singularity build --fakeroot <image_name>.simg Singularity`
 
-For example:and copy the files to your local machine to make sure changes are stored locally:
+For example:
 `singularity build --fakeroot pytorch.simg Singularity`
 
 
